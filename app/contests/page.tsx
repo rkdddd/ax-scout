@@ -2,6 +2,7 @@
 // Plan SC: PRD §5 — 항목마다 이름·날짜·단계·결과를 표시하고, 값이 없으면 "미입력". 상세는 클릭 1번.
 import { CalendarDays, FolderOpen, Plus, SearchX, TriangleAlert } from "lucide-react";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import EmptyState from "@/components/empty-state";
 import FlashNotice from "@/components/flash-notice";
@@ -11,18 +12,20 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CONTEST_STAGES, type ContestStage } from "@/lib/constants";
 import { listContests, type Contest } from "@/lib/contests";
-import { formatDate, formatDateTime, orEmpty } from "@/lib/format";
+import { formatDate, formatDateTime, orEmpty, todayInKorea } from "@/lib/format";
+import { PERIOD_LABELS, formatRange, getRange, parsePeriod, type DateRange, type Period } from "@/lib/period";
 import { restoreContest } from "./actions";
 
 function parseStage(value: string | string[] | undefined): ContestStage | undefined {
   return CONTEST_STAGES.find((stage) => stage === value);
 }
 
-// 필터 링크 주소를 만든다 (단계와 "보관 포함" 상태를 함께 유지).
-function buildHref(stage: ContestStage | undefined, includeArchived: boolean) {
+// 필터 링크 주소를 만든다 (단계, "보관 포함", 기간 상태를 함께 유지).
+function buildHref(stage: ContestStage | undefined, includeArchived: boolean, period?: Period) {
   const params = new URLSearchParams();
   if (stage) params.set("stage", stage);
   if (includeArchived) params.set("archived", "1");
+  if (period) params.set("period", period);
   const query = params.toString();
   return query ? `/contests?${query}` : "/contests";
 }
@@ -96,10 +99,18 @@ async function ContestList({ searchParams }: { searchParams: PageProps<"/contest
   const includeArchived = query.archived === "1";
   const notice =
     query.notice === "created" ? "공모전을 등록했어요." : undefined;
+  // 대시보드에서 넘어온 기간(이번 주/이번 달). 마감일이 그 기간 안인 공모전만 보여준다.
+  const parsedPeriod = parsePeriod(query.period);
+  const period = parsedPeriod === "week" || parsedPeriod === "month" ? parsedPeriod : undefined;
+  let range: DateRange | null = null;
+  if (period) {
+    await connection(); // 오늘 날짜를 쓰므로 요청 때마다 새로 계산한다
+    range = getRange(period, todayInKorea());
+  }
 
   let contests: Contest[];
   try {
-    contests = await listContests({ stage, includeArchived });
+    contests = await listContests({ stage, includeArchived, range });
   } catch {
     return (
       <div className="rounded-3xl bg-card">
@@ -109,7 +120,7 @@ async function ContestList({ searchParams }: { searchParams: PageProps<"/contest
           description="잠시 후 다시 시도해 주세요."
           action={
             <Button asChild variant="tonal">
-              <Link href={buildHref(stage, includeArchived)}>다시 불러오기</Link>
+              <Link href={buildHref(stage, includeArchived, period)}>다시 불러오기</Link>
             </Button>
           }
         />
@@ -117,23 +128,33 @@ async function ContestList({ searchParams }: { searchParams: PageProps<"/contest
     );
   }
 
-  const filtered = Boolean(stage || includeArchived);
+  const filtered = Boolean(stage || includeArchived || period);
 
   return (
     <>
       {notice ? <FlashNotice message={notice} /> : null}
 
+      {range && period ? (
+        <p className="mb-3 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">{PERIOD_LABELS[period]}</span>
+          마감일 {formatRange(range)} 기준
+          <Link href={buildHref(stage, includeArchived)} className="font-semibold text-primary hover:underline">
+            기간 해제
+          </Link>
+        </p>
+      ) : null}
+
       <div className="no-scrollbar -mx-5 mb-4 flex items-center gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:px-0">
-        <Chip href={buildHref(undefined, includeArchived)} active={!stage}>
+        <Chip href={buildHref(undefined, includeArchived, period)} active={!stage}>
           전체
         </Chip>
         {CONTEST_STAGES.map((item) => (
-          <Chip key={item} href={buildHref(item, includeArchived)} active={stage === item}>
+          <Chip key={item} href={buildHref(item, includeArchived, period)} active={stage === item}>
             {item}
           </Chip>
         ))}
         <span className="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden />
-        <Chip href={buildHref(stage, !includeArchived)} active={includeArchived}>
+        <Chip href={buildHref(stage, !includeArchived, period)} active={includeArchived}>
           보관 포함
         </Chip>
       </div>
