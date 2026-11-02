@@ -11,6 +11,10 @@ export const DEFAULT_CONTEST_STAGE: ContestStage = "관심";
 // 공고에서 버튼으로 등록할 때의 단계 (DESIGN §2.5)
 export const NOTICE_CONTEST_STAGE: ContestStage = "검토";
 
+// 공고가 어디서 왔는지 (DESIGN §3.2-1). 검색 알림에서 온 공고는 화면에서 "후보"로 보여준다.
+export const NOTICE_ORIGINS = ["직접 등록", "기관 RSS", "검색 알림"] as const;
+export type NoticeOrigin = (typeof NOTICE_ORIGINS)[number];
+
 // AI 활동실적의 유형
 export const ACTIVITY_TYPES = ["AI 사업", "교육", "거버넌스", "대외활동"] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];

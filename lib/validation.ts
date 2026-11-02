@@ -62,6 +62,18 @@ export const activitySchema = z.object({
   outcome: optionalText(500, "성과는"),
 });
 
+// 링크로 공고 등록 폼 (DESIGN §1.5). 제목·기관·마감일은 비워도 된다 (제목은 페이지에서 가져온다).
+export const noticeLinkSchema = z.object({
+  url: z
+    .string()
+    .trim()
+    .min(1, "공고 주소를 입력해 주세요.")
+    .max(2000, "주소가 너무 길어요."),
+  title: optionalText(300, "제목은"),
+  organization: optionalText(200, "기관 이름은"),
+  deadline: optionalDate,
+});
+
 export type ContestInput = z.infer<typeof contestSchema>;
 export type ActivityInput = z.infer<typeof activitySchema>;
 

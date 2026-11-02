@@ -59,6 +59,8 @@ async function ContestDetail({
   return (
     <div className="flex flex-col gap-4">
       {query.notice === "updated" ? <FlashNotice message="수정 내용을 저장했어요." /> : null}
+      {query.notice === "registered" ? <FlashNotice message="공고를 검토 단계 공모전으로 등록했어요." /> : null}
+      {query.notice === "exists" ? <FlashNotice message="이미 이 공고로 등록한 공모전이에요." /> : null}
 
       {/* 맨 위: 이름과 현재 단계 */}
       <Card>

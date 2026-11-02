@@ -1,0 +1,35 @@
+# 공고 자동 수집 (PLAN 16번). 매일 오전 6시(KST)에 기관 RSS와 검색 알림 RSS에서 AI 공모전 공고를 모아 Supabase에 저장한다.
+# 키는 코드에 쓰지 않고 GitHub 저장소의 Secrets에서만 읽는다. (Settings → Secrets and variables → Actions)
+#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  … 필수
+#   GOOGLE_ALERT_RSS_URLS                     … 선택 (Google 알림 RSS 주소, 여러 개면 쉼표로 구분)
+name: 공고 자동 수집
+
+on:
+  schedule:
+    - cron: "0 21 * * *" # UTC 21:00 = 한국 시간 다음 날 오전 6시
+  workflow_dispatch: {} # 화면에서 수동으로도 실행할 수 있다 (Actions 탭 → Run workflow)
+
+permissions:
+  contents: read # 저장소 내용을 읽기만 한다
+
+concurrency:
+  group: collect
+  cancel-in-progress: false # 이미 돌고 있으면 끝날 때까지 기다린다 (같은 공고를 동시에 저장하지 않게)
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: 공고 수집 실행
+        run: npm run collect
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GOOGLE_ALERT_RSS_URLS: ${{ secrets.GOOGLE_ALERT_RSS_URLS }}
