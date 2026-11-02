@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import { Suspense } from "react";
 import MainNav from "@/components/main-nav";
 import "./globals.css";
 
@@ -32,7 +33,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/" className="text-lg font-bold tracking-tight">
               AX SCOUT
             </Link>
-            <MainNav />
+            {/* 주소가 바뀌는 화면(/contests/[id] 등)에서 현재 주소를 읽으려면 Suspense가 필요하다 */}
+            <Suspense fallback={<div className="h-9" aria-hidden />}>
+              <MainNav />
+            </Suspense>
           </div>
         </header>
         {children}

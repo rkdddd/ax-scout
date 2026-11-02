@@ -3,11 +3,12 @@
 // Design Ref: DESIGN §2.1 — 폼 입력 → 서버 동작이 받음 → 검증 → Supabase 저장 → 화면 갱신.
 // 로그인이 없는 대신 서버에서 입력값을 모두 다시 검증한다.
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import { contestSchema, toFieldErrors } from "@/lib/validation";
 
 export type ContestFormState = {
-  status: "idle" | "error" | "success";
+  status: "idle" | "error";
   message?: string;
   fieldErrors?: Record<string, string[]>;
   // 오류가 났을 때 입력했던 값을 그대로 다시 보여주기 위해 돌려준다.
@@ -46,6 +47,7 @@ export async function createContest(
     };
   }
 
+  // 저장이 끝나면 목록으로 이동한다 (redirect는 오류처럼 던져지므로 try 밖에서 부른다).
   revalidatePath("/contests");
-  return { status: "success", message: "공모전을 등록했습니다." };
+  redirect("/contests");
 }
