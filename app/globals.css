@@ -1,26 +1,131 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+  AX SCOUT 디자인 시스템 (docs/design-system.md 참고)
+  토스에서 영감을 받은 밝고 친근한 톤. 토스의 로고·전용 글꼴은 쓰지 않는다.
+  - 배경 #FFFFFF / #F2F4F6, 글자 #191F28 / #6B7684, 포인트 #3182F6
+  - 모서리는 부드럽게, 그림자와 테두리는 최소한으로
+*/
 
 @theme inline {
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-sans);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --radius-4xl: 32px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* 바탕 */
+  --background: #ffffff;
+  --surface: #f2f4f6; /* 화면 전체 바탕(회색). 카드는 흰색으로 올린다 */
+  --card: #ffffff;
+  --card-foreground: #191f28;
+  --popover: #ffffff;
+  --popover-foreground: #191f28;
+
+  /* 글자 */
+  --foreground: #191f28;
+  --muted-foreground: #6b7684;
+
+  /* 포인트(파랑) */
+  --primary: #3182f6;
+  --primary-foreground: #ffffff;
+  --accent: #e8f3ff; /* 연한 파랑 바탕 */
+  --accent-foreground: #1b64da;
+  --ring: #3182f6;
+
+  /* 중립 */
+  --secondary: #f2f4f6;
+  --secondary-foreground: #4e5968;
+  --muted: #f2f4f6;
+  --border: #e5e8eb;
+  --input: #f2f4f6;
+
+  /* 상태 */
+  --destructive: #f04452;
+  --success: #03824f;
+  --success-soft: #e6f7ef;
+  --warning: #b86e00;
+  --warning-soft: #fff4e0;
+
+  --radius: 12px;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
+  html {
+    @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-surface text-foreground antialiased;
+    font-size: 15px;
+    line-height: 1.6;
+    letter-spacing: -0.01em;
+    word-break: keep-all; /* 한글을 단어 단위로 줄바꿈 */
+  }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* 누르는 느낌: 살짝 작아졌다가 돌아온다 (150ms) */
+  a,
+  button {
+    transition-property: color, background-color, border-color, opacity, transform;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out;
+  }
+  button:not(:disabled):active,
+  a[data-press]:active {
+    transform: scale(0.98);
+  }
+
+  /* 가로로 밀어서 보는 줄(필터 칩 등)의 스크롤 막대를 숨긴다 */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 움직임을 줄여 달라는 설정을 존중한다 */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
 }
