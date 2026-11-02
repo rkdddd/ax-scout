@@ -1,22 +1,56 @@
 "use client";
 
 // Design Ref: DESIGN §1.2 — 공모전 입력 폼. 개인정보 금지 안내 문구를 반드시 함께 보여준다.
+import { Info } from "lucide-react";
 import Link from "next/link";
 import { useActionState } from "react";
+import SubmitButton from "@/components/submit-button";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import { CONTEST_STAGES, DEFAULT_CONTEST_STAGE } from "@/lib/constants";
 import type { ContestFormState } from "./actions";
 
 const initialState: ContestFormState = { status: "idle" };
 
-const inputClass =
-  "w-full rounded-md border border-foreground/20 bg-background px-3 py-2 text-sm focus:border-foreground focus:outline-none";
-
+// 칸 아래에 붙는 오류 문구
 function FieldError({ id, errors }: { id: string; errors?: string[] }) {
   if (!errors?.length) return null;
   return (
-    <p id={id} className="mt-1 text-sm text-red-600">
+    <p id={id} className="text-sm font-medium text-destructive">
       {errors[0]}
     </p>
+  );
+}
+
+// 라벨 + 입력 칸 + 오류 문구를 한 묶음으로 둔다
+function Field({
+  id,
+  label,
+  required,
+  hint,
+  errors,
+  children,
+}: {
+  id: string;
+  label: string;
+  required?: boolean;
+  hint?: string;
+  errors?: string[];
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>
+        {label}
+        {required ? <span className="text-primary">*</span> : null}
+      </Label>
+      {children}
+      {hint && !errors?.length ? <p className="text-sm text-muted-foreground">{hint}</p> : null}
+      <FieldError id={`${id}-error`} errors={errors} />
+    </div>
   );
 }
 
@@ -35,138 +69,115 @@ export default function ContestForm({
   submitLabel,
   cancelHref,
 }: ContestFormProps) {
-  const [state, formAction, pending] = useActionState(action, initialState);
+  const [state, formAction] = useActionState(action, initialState);
   const errors = state.fieldErrors ?? {};
   const values = state.values ?? initialValues ?? {};
+  const describe = (name: string) => (errors[name] ? `${name}-error` : undefined);
 
   return (
-    <form action={formAction} className="flex flex-col gap-5" noValidate>
+    <form action={formAction} className="flex flex-col gap-6" noValidate>
       {/* 개인정보 금지 안내 (PRD §7) */}
-      <p className="rounded-md bg-foreground/5 px-3 py-2 text-sm text-foreground/80">
-        이름·연락처·주민번호 등 개인정보는 입력하지 마세요. 부서나 팀 단위까지만 적어 주세요.
-      </p>
+      <div className="flex gap-3 rounded-2xl bg-accent p-4 text-sm text-accent-foreground">
+        <Info className="mt-0.5 size-5 shrink-0" aria-hidden />
+        <p>
+          이름·연락처·주민번호 같은 개인정보는 적지 마세요.
+          <br />
+          부서나 팀 단위까지만 적어 주세요.
+        </p>
+      </div>
 
-      <div>
-        <label htmlFor="name" className="mb-1 block text-sm font-medium">
-          공모전 이름 <span className="text-red-600">*</span>
-        </label>
-        <input
+      <Field id="name" label="공모전 이름" required errors={errors.name}>
+        <Input
           id="name"
           name="name"
           type="text"
           required
+          placeholder="예) 공공 AI 아이디어 공모전"
           defaultValue={values.name}
           aria-invalid={Boolean(errors.name)}
-          aria-describedby={errors.name ? "name-error" : undefined}
-          className={inputClass}
+          aria-describedby={describe("name")}
         />
-        <FieldError id="name-error" errors={errors.name} />
-      </div>
+      </Field>
 
-      <div>
-        <label htmlFor="organizer" className="mb-1 block text-sm font-medium">
-          주최 기관
-        </label>
-        <input
+      <Field id="organizer" label="주최 기관" errors={errors.organizer}>
+        <Input
           id="organizer"
           name="organizer"
           type="text"
           defaultValue={values.organizer}
           aria-invalid={Boolean(errors.organizer)}
-          aria-describedby={errors.organizer ? "organizer-error" : undefined}
-          className={inputClass}
+          aria-describedby={describe("organizer")}
         />
-        <FieldError id="organizer-error" errors={errors.organizer} />
+      </Field>
+
+      <div className="grid gap-6 sm:grid-cols-2">
+        <Field id="date" label="마감일" errors={errors.date}>
+          <Input
+            id="date"
+            name="date"
+            type="date"
+            defaultValue={values.date}
+            aria-invalid={Boolean(errors.date)}
+            aria-describedby={describe("date")}
+          />
+        </Field>
+
+        <Field id="stage" label="단계" required errors={errors.stage}>
+          {/* key: 오류 뒤에도 고른 단계가 남도록, 값이 바뀌면 선택 상자를 새로 그린다 */}
+          <NativeSelect
+            key={values.stage ?? "default"}
+            id="stage"
+            name="stage"
+            defaultValue={values.stage ?? DEFAULT_CONTEST_STAGE}
+            aria-invalid={Boolean(errors.stage)}
+            aria-describedby={describe("stage")}
+          >
+            {CONTEST_STAGES.map((stage) => (
+              <option key={stage} value={stage}>
+                {stage}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
       </div>
 
-      <div>
-        <label htmlFor="date" className="mb-1 block text-sm font-medium">
-          마감일
-        </label>
-        <input
-          id="date"
-          name="date"
-          type="date"
-          defaultValue={values.date}
-          aria-invalid={Boolean(errors.date)}
-          aria-describedby={errors.date ? "date-error" : undefined}
-          className={inputClass}
-        />
-        <FieldError id="date-error" errors={errors.date} />
-      </div>
-
-      <div>
-        <label htmlFor="stage" className="mb-1 block text-sm font-medium">
-          단계 <span className="text-red-600">*</span>
-        </label>
-        {/* key: 오류 뒤에도 고른 단계가 남도록, 값이 바뀌면 선택 상자를 새로 그린다 */}
-        <select
-          key={values.stage ?? "default"}
-          id="stage"
-          name="stage"
-          defaultValue={values.stage ?? DEFAULT_CONTEST_STAGE}
-          aria-invalid={Boolean(errors.stage)}
-          aria-describedby={errors.stage ? "stage-error" : undefined}
-          className={inputClass}
-        >
-          {CONTEST_STAGES.map((stage) => (
-            <option key={stage} value={stage}>
-              {stage}
-            </option>
-          ))}
-        </select>
-        <FieldError id="stage-error" errors={errors.stage} />
-      </div>
-
-      <div>
-        <label htmlFor="result" className="mb-1 block text-sm font-medium">
-          결과 (수상 여부 등)
-        </label>
-        <input
+      <Field id="result" label="결과" hint="수상 여부 등을 적어요. 아직이라면 비워 두세요." errors={errors.result}>
+        <Input
           id="result"
           name="result"
           type="text"
           defaultValue={values.result}
           aria-invalid={Boolean(errors.result)}
-          aria-describedby={errors.result ? "result-error" : undefined}
-          className={inputClass}
+          aria-describedby={describe("result")}
         />
-        <FieldError id="result-error" errors={errors.result} />
-      </div>
+      </Field>
 
-      <div>
-        <label htmlFor="note" className="mb-1 block text-sm font-medium">
-          메모
-        </label>
-        <textarea
+      <Field id="note" label="메모" errors={errors.note}>
+        <Textarea
           id="note"
           name="note"
           rows={4}
           defaultValue={values.note}
           aria-invalid={Boolean(errors.note)}
-          aria-describedby={errors.note ? "note-error" : undefined}
-          className={inputClass}
+          aria-describedby={describe("note")}
         />
-        <FieldError id="note-error" errors={errors.note} />
-      </div>
+      </Field>
 
-      <div aria-live="polite" className="min-h-6 text-sm">
+      <div aria-live="polite">
         {state.status === "error" && state.message ? (
-          <p className="text-red-600">{state.message}</p>
+          <p className="rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
+            {state.message}
+          </p>
         ) : null}
       </div>
 
-      <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md bg-foreground px-5 py-2 text-sm font-medium text-background disabled:opacity-50"
-        >
-          {pending ? "저장하는 중..." : submitLabel}
-        </button>
-        <Link href={cancelHref} className="text-sm text-foreground/70 hover:underline">
-          취소
-        </Link>
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
+        <Button asChild variant="ghost" size="lg">
+          <Link href={cancelHref}>취소</Link>
+        </Button>
+        <SubmitButton size="lg" pendingLabel="저장하는 중" className="sm:min-w-40">
+          {submitLabel}
+        </SubmitButton>
       </div>
     </form>
   );

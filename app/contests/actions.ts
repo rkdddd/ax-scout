@@ -62,7 +62,7 @@ export async function createContest(
 
   // 저장이 끝나면 목록으로 이동한다 (redirect는 오류처럼 던져지므로 try 밖에서 부른다).
   revalidatePath("/contests");
-  redirect("/contests");
+  redirect("/contests?notice=created"); // notice: 화면에 "등록했어요" 알림을 잠깐 띄운다
 }
 
 // 공모전 수정. id는 화면에서 bind로 미리 넘겨 받는다.
@@ -92,7 +92,7 @@ export async function updateContest(
 
   revalidatePath("/contests");
   revalidatePath(`/contests/${id}`);
-  redirect(`/contests/${id}`);
+  redirect(`/contests/${id}?notice=updated`);
 }
 
 // 보관·복구 (DESIGN §2.2). 항목은 지우지 않고 archived_at 만 넣거나 비운다.

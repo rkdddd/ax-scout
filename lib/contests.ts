@@ -43,6 +43,40 @@ export async function listContests({ stage, includeArchived }: ListOptions) {
   return data as Contest[];
 }
 
+// 단계별 공모전 개수 (보관된 항목은 제외). 없는 단계는 0으로 채운다.
+export async function countContestsByStage(): Promise<Record<ContestStage, number>> {
+  const { data, error } = await getSupabase()
+    .from("contests")
+    .select("stage")
+    .is("archived_at", null);
+  if (error) {
+    console.error("단계별 개수 조회 실패:", error.code);
+    throw new Error("공모전 현황을 불러오지 못했습니다.");
+  }
+
+  const counts: Record<ContestStage, number> = { 관심: 0, 검토: 0, "참가 진행": 0, 완료: 0 };
+  for (const row of data as { stage: ContestStage }[]) counts[row.stage] += 1;
+  return counts;
+}
+
+// 마감이 가까운 공모전. 오늘 이후에 마감되고 아직 끝나지 않은(완료가 아닌) 항목만, 가까운 순서로.
+// today는 한국 날짜(YYYY-MM-DD)다.
+export async function listUpcomingContests(today: string, limit: number) {
+  const { data, error } = await getSupabase()
+    .from("contests")
+    .select(COLUMNS)
+    .is("archived_at", null)
+    .neq("stage", "완료")
+    .gte("date", today)
+    .order("date", { ascending: true })
+    .limit(limit);
+  if (error) {
+    console.error("마감 임박 공모전 조회 실패:", error.code);
+    throw new Error("마감이 가까운 공모전을 불러오지 못했습니다.");
+  }
+  return data as Contest[];
+}
+
 // 공모전 한 건. 없으면 null.
 export async function getContest(id: number) {
   const { data, error } = await getSupabase()

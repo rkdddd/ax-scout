@@ -13,6 +13,19 @@ export function formatDate(value: string | null | undefined): string {
   return value ? value.replaceAll("-", ".") : EMPTY_TEXT;
 }
 
+// 지금 한국 날짜를 YYYY-MM-DD로 돌려준다.
+export function todayInKorea(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
+}
+
+// 오늘부터 마감일까지 남은 날수를 "오늘", "D-3"처럼 보여준다.
+export function formatDday(deadline: string, today: string): string {
+  const days = Math.round(
+    (new Date(`${deadline}T00:00:00Z`).getTime() - new Date(`${today}T00:00:00Z`).getTime()) / 86_400_000,
+  );
+  return days <= 0 ? "오늘 마감" : `D-${days}`;
+}
+
 const dateTimeFormat = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
   year: "numeric",
