@@ -1,9 +1,10 @@
 "use client";
 
 // Design Ref: DESIGN §1.2 — 공모전 입력 폼. 개인정보 금지 안내 문구를 반드시 함께 보여준다.
+import Link from "next/link";
 import { useActionState } from "react";
 import { CONTEST_STAGES, DEFAULT_CONTEST_STAGE } from "@/lib/constants";
-import { createContest, type ContestFormState } from "./actions";
+import type { ContestFormState } from "./actions";
 
 const initialState: ContestFormState = { status: "idle" };
 
@@ -19,10 +20,24 @@ function FieldError({ id, errors }: { id: string; errors?: string[] }) {
   );
 }
 
-export default function ContestForm() {
-  const [state, formAction, pending] = useActionState(createContest, initialState);
+type ContestFormProps = {
+  // 등록·수정 중 어느 쪽이든 같은 폼을 쓴다. 저장 동작은 바깥에서 넘겨 받는다.
+  action: (prevState: ContestFormState, formData: FormData) => Promise<ContestFormState>;
+  // 수정할 때 칸에 미리 채워 둘 값
+  initialValues?: Record<string, string>;
+  submitLabel: string;
+  cancelHref: string;
+};
+
+export default function ContestForm({
+  action,
+  initialValues,
+  submitLabel,
+  cancelHref,
+}: ContestFormProps) {
+  const [state, formAction, pending] = useActionState(action, initialState);
   const errors = state.fieldErrors ?? {};
-  const values = state.values ?? {};
+  const values = state.values ?? initialValues ?? {};
 
   return (
     <form action={formAction} className="flex flex-col gap-5" noValidate>
@@ -141,13 +156,18 @@ export default function ContestForm() {
         ) : null}
       </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="self-start rounded-md bg-foreground px-5 py-2 text-sm font-medium text-background disabled:opacity-50"
-      >
-        {pending ? "저장하는 중..." : "등록"}
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={pending}
+          className="rounded-md bg-foreground px-5 py-2 text-sm font-medium text-background disabled:opacity-50"
+        >
+          {pending ? "저장하는 중..." : submitLabel}
+        </button>
+        <Link href={cancelHref} className="text-sm text-foreground/70 hover:underline">
+          취소
+        </Link>
+      </div>
     </form>
   );
 }
