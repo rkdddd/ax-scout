@@ -1,12 +1,12 @@
 // Design Ref: DESIGN §1.2 — /contests/[id] 공모전 상세
-// 단계 변경·수정은 PLAN 8번, 보관·복구 버튼은 9번에서 추가한다.
+// 단계 변경·수정은 PLAN 8번, 보관·복구는 9번.
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { CONTEST_STAGES } from "@/lib/constants";
 import { getContest, type Contest } from "@/lib/contests";
 import { formatDate, formatDateTime, orEmpty } from "@/lib/format";
-import { changeContestStage } from "../actions";
+import { archiveContest, changeContestStage, restoreContest } from "../actions";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -71,12 +71,29 @@ async function ContestDetail({ params }: { params: PageProps<"/contests/[id]">["
             </button>
           ))}
         </form>
-        <Link
-          href={`/contests/${contest.id}/edit`}
-          className="ml-auto rounded-md border border-foreground/30 px-4 py-1.5 text-sm font-medium hover:bg-foreground/10"
-        >
-          수정
-        </Link>
+        <div className="ml-auto flex items-center gap-2">
+          <Link
+            href={`/contests/${contest.id}/edit`}
+            className="rounded-md border border-foreground/30 px-4 py-1.5 text-sm font-medium hover:bg-foreground/10"
+          >
+            수정
+          </Link>
+          {/* 삭제는 없다. 보관하면 목록에서 숨겨지고, 언제든 복구할 수 있다. */}
+          <form
+            action={
+              contest.archived_at
+                ? restoreContest.bind(null, contest.id)
+                : archiveContest.bind(null, contest.id)
+            }
+          >
+            <button
+              type="submit"
+              className="rounded-md border border-foreground/30 px-4 py-1.5 text-sm font-medium hover:bg-foreground/10"
+            >
+              {contest.archived_at ? "복구" : "보관"}
+            </button>
+          </form>
+        </div>
       </div>
 
       <dl>

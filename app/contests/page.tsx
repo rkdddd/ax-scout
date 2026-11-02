@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { CONTEST_STAGES, type ContestStage } from "@/lib/constants";
 import { listContests, type Contest } from "@/lib/contests";
 import { formatDate, formatDateTime, orEmpty } from "@/lib/format";
+import { restoreContest } from "./actions";
 
 function parseStage(value: string | string[] | undefined): ContestStage | undefined {
   return CONTEST_STAGES.find((stage) => stage === value);
@@ -81,14 +82,17 @@ async function ContestList({ searchParams }: { searchParams: PageProps<"/contest
                 <th className="py-2 pr-3 font-medium">마감일</th>
                 <th className="py-2 pr-3 font-medium">단계</th>
                 <th className="py-2 pr-3 font-medium">결과</th>
-                <th className="py-2 font-medium">수정 일시</th>
+                <th className="py-2 pr-3 font-medium">수정 일시</th>
+                <th className="py-2 font-medium">
+                  <span className="sr-only">복구</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {contests.map((contest) => (
                 <tr
                   key={contest.id}
-                  className={`border-b border-foreground/10 ${contest.archived_at ? "opacity-50" : ""}`}
+                  className={`border-b border-foreground/10 ${contest.archived_at ? "text-foreground/50" : ""}`}
                 >
                   <td className="py-3 pr-3">
                     <Link href={`/contests/${contest.id}`} className="font-medium underline-offset-2 hover:underline">
@@ -101,7 +105,20 @@ async function ContestList({ searchParams }: { searchParams: PageProps<"/contest
                   <td className="py-3 pr-3">{formatDate(contest.date)}</td>
                   <td className="py-3 pr-3">{contest.stage}</td>
                   <td className="py-3 pr-3">{orEmpty(contest.result)}</td>
-                  <td className="py-3">{formatDateTime(contest.updated_at)}</td>
+                  <td className="py-3 pr-3">{formatDateTime(contest.updated_at)}</td>
+                  <td className="py-3">
+                    {/* 보관된 항목에만 복구 버튼이 보인다 (DESIGN §1.4) */}
+                    {contest.archived_at ? (
+                      <form action={restoreContest.bind(null, contest.id)}>
+                        <button
+                          type="submit"
+                          className="rounded-md border border-foreground/30 px-3 py-1 text-xs font-medium hover:bg-foreground/10"
+                        >
+                          복구
+                        </button>
+                      </form>
+                    ) : null}
+                  </td>
                 </tr>
               ))}
             </tbody>
