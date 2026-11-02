@@ -95,6 +95,32 @@ export async function updateContest(
   redirect(`/contests/${id}`);
 }
 
+// 보관·복구 (DESIGN §2.2). 항목은 지우지 않고 archived_at 만 넣거나 비운다.
+// 보관·복구도 항목을 바꾸는 일이라 수정 일시(updated_at)가 함께 갱신된다.
+async function setArchived(id: number, archived: boolean): Promise<void> {
+  if (!isValidId(id)) return;
+
+  const { error } = await getSupabase()
+    .from("contests")
+    .update({ archived_at: archived ? new Date().toISOString() : null })
+    .eq("id", id);
+  if (error) {
+    console.error(archived ? "보관 실패:" : "복구 실패:", error.code);
+    throw new Error(archived ? "보관하지 못했습니다." : "복구하지 못했습니다.");
+  }
+
+  revalidatePath("/contests");
+  revalidatePath(`/contests/${id}`);
+}
+
+export async function archiveContest(id: number): Promise<void> {
+  await setArchived(id, true);
+}
+
+export async function restoreContest(id: number): Promise<void> {
+  await setArchived(id, false);
+}
+
 // 상세 화면의 단계 버튼. 단계만 바꾸고 같은 화면에 머문다.
 export async function changeContestStage(id: number, formData: FormData): Promise<void> {
   const stage = CONTEST_STAGES.find((item) => item === formData.get("stage"));
