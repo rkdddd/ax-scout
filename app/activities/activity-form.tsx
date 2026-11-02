@@ -1,7 +1,6 @@
 "use client";
 
 // Design Ref: DESIGN §1.2 — 활동실적 입력 폼. 개인정보 금지 안내 문구를 반드시 함께 보여준다.
-import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useActionState } from "react";
 import FormField from "@/components/form-field";
@@ -39,16 +38,6 @@ export default function ActivityForm({
   return (
     <form action={formAction} className="flex flex-col gap-6" noValidate>
       <PrivacyNotice />
-
-      {/* 저장이 끝나면 맨 위에서 알려준다 */}
-      <div aria-live="polite">
-        {state.status === "success" && state.message ? (
-          <p className="flex items-center gap-2 rounded-2xl bg-success-soft px-4 py-3 text-sm font-semibold text-success">
-            <CheckCircle2 className="size-5 shrink-0" aria-hidden />
-            {state.message}
-          </p>
-        ) : null}
-      </div>
 
       <FormField id="name" label="활동 이름" required errors={errors.name}>
         <Input
