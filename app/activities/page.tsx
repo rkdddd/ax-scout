@@ -2,6 +2,7 @@
 // Plan SC: PRD §5 — 항목마다 이름·날짜·유형·결과(성과)를 표시하고, 값이 없으면 "미입력".
 import { FolderOpen, Plus, SearchX, TriangleAlert } from "lucide-react";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import EmptyState from "@/components/empty-state";
 import FlashNotice from "@/components/flash-notice";
@@ -11,18 +12,20 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listActivities, type Activity } from "@/lib/activities";
 import { ACTIVITY_TYPES, type ActivityType } from "@/lib/constants";
-import { formatDateTime, orEmpty } from "@/lib/format";
+import { formatDateTime, orEmpty, todayInKorea } from "@/lib/format";
+import { PERIOD_LABELS, formatRange, getRange, parsePeriod, type DateRange, type Period } from "@/lib/period";
 import { restoreActivity } from "./actions";
 
 function parseType(value: string | string[] | undefined): ActivityType | undefined {
   return ACTIVITY_TYPES.find((type) => type === value);
 }
 
-// 필터 링크 주소를 만든다 (유형과 "보관 포함" 상태를 함께 유지).
-function buildHref(type: ActivityType | undefined, includeArchived: boolean) {
+// 필터 링크 주소를 만든다 (유형, "보관 포함", 기간 상태를 함께 유지).
+function buildHref(type: ActivityType | undefined, includeArchived: boolean, period?: Period) {
   const params = new URLSearchParams();
   if (type) params.set("type", type);
   if (includeArchived) params.set("archived", "1");
+  if (period) params.set("period", period);
   const query = params.toString();
   return query ? `/activities?${query}` : "/activities";
 }
@@ -116,10 +119,18 @@ async function ActivityList({ searchParams }: { searchParams: PageProps<"/activi
   const type = parseType(query.type);
   const includeArchived = query.archived === "1";
   const notice = query.notice === "created" ? "활동을 등록했어요." : undefined;
+  // 대시보드에서 넘어온 기간(이번 주/이번 달). 활동 날짜가 그 기간 안인 활동만 보여준다.
+  const parsedPeriod = parsePeriod(query.period);
+  const period = parsedPeriod === "week" || parsedPeriod === "month" ? parsedPeriod : undefined;
+  let range: DateRange | null = null;
+  if (period) {
+    await connection(); // 오늘 날짜를 쓰므로 요청 때마다 새로 계산한다
+    range = getRange(period, todayInKorea());
+  }
 
   let activities: Activity[];
   try {
-    activities = await listActivities({ type, includeArchived });
+    activities = await listActivities({ type, includeArchived, range });
   } catch {
     return (
       <div className="rounded-3xl bg-card">
@@ -129,7 +140,7 @@ async function ActivityList({ searchParams }: { searchParams: PageProps<"/activi
           description="잠시 후 다시 시도해 주세요."
           action={
             <Button asChild variant="tonal">
-              <Link href={buildHref(type, includeArchived)}>다시 불러오기</Link>
+              <Link href={buildHref(type, includeArchived, period)}>다시 불러오기</Link>
             </Button>
           }
         />
@@ -137,24 +148,34 @@ async function ActivityList({ searchParams }: { searchParams: PageProps<"/activi
     );
   }
 
-  const filtered = Boolean(type || includeArchived);
+  const filtered = Boolean(type || includeArchived || period);
   const groups = groupByMonth(activities);
 
   return (
     <>
       {notice ? <FlashNotice message={notice} /> : null}
 
+      {range && period ? (
+        <p className="mb-3 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">{PERIOD_LABELS[period]}</span>
+          활동 날짜 {formatRange(range)} 기준
+          <Link href={buildHref(type, includeArchived)} className="font-semibold text-primary hover:underline">
+            기간 해제
+          </Link>
+        </p>
+      ) : null}
+
       <div className="no-scrollbar -mx-5 mb-4 flex items-center gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:px-0">
-        <Chip href={buildHref(undefined, includeArchived)} active={!type}>
+        <Chip href={buildHref(undefined, includeArchived, period)} active={!type}>
           전체
         </Chip>
         {ACTIVITY_TYPES.map((item) => (
-          <Chip key={item} href={buildHref(item, includeArchived)} active={type === item}>
+          <Chip key={item} href={buildHref(item, includeArchived, period)} active={type === item}>
             {item}
           </Chip>
         ))}
         <span className="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden />
-        <Chip href={buildHref(type, !includeArchived)} active={includeArchived}>
+        <Chip href={buildHref(type, !includeArchived, period)} active={includeArchived}>
           보관 포함
         </Chip>
       </div>

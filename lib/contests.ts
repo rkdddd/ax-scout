@@ -1,6 +1,7 @@
 // Design Ref: DESIGN §3.1 — 공모전 조회. DB 접근은 서버 코드에서만 한다.
 import "server-only";
 import type { ContestStage } from "@/lib/constants";
+import type { DateRange } from "@/lib/period";
 import { getSupabase } from "@/lib/supabase";
 
 export type Contest = {
@@ -23,10 +24,12 @@ const COLUMNS =
 type ListOptions = {
   stage?: ContestStage;
   includeArchived?: boolean;
+  // 마감일이 이 기간 안에 있는 공모전만 (마감일이 없는 공모전은 빠진다)
+  range?: DateRange | null;
 };
 
 // 공모전 목록. 기본으로 보관된 항목은 빼고, 최근에 수정한 것이 위에 온다.
-export async function listContests({ stage, includeArchived }: ListOptions) {
+export async function listContests({ stage, includeArchived, range }: ListOptions) {
   let query = getSupabase()
     .from("contests")
     .select(COLUMNS)
@@ -34,6 +37,7 @@ export async function listContests({ stage, includeArchived }: ListOptions) {
     .order("id", { ascending: false });
   if (stage) query = query.eq("stage", stage);
   if (!includeArchived) query = query.is("archived_at", null);
+  if (range) query = query.gte("date", range.from).lte("date", range.to);
 
   const { data, error } = await query;
   if (error) {
@@ -44,11 +48,14 @@ export async function listContests({ stage, includeArchived }: ListOptions) {
 }
 
 // 단계별 공모전 개수 (보관된 항목은 제외). 없는 단계는 0으로 채운다.
-export async function countContestsByStage(): Promise<Record<ContestStage, number>> {
-  const { data, error } = await getSupabase()
-    .from("contests")
-    .select("stage")
-    .is("archived_at", null);
+// range가 있으면 마감일이 그 기간 안인 공모전만 센다. 목록(listContests)과 같은 조건이라 숫자가 같다.
+export async function countContestsByStage(
+  range?: DateRange | null,
+): Promise<Record<ContestStage, number>> {
+  let query = getSupabase().from("contests").select("stage").is("archived_at", null);
+  if (range) query = query.gte("date", range.from).lte("date", range.to);
+
+  const { data, error } = await query;
   if (error) {
     console.error("단계별 개수 조회 실패:", error.code);
     throw new Error("공모전 현황을 불러오지 못했습니다.");
@@ -57,6 +64,20 @@ export async function countContestsByStage(): Promise<Record<ContestStage, numbe
   const counts: Record<ContestStage, number> = { 관심: 0, 검토: 0, "참가 진행": 0, 완료: 0 };
   for (const row of data as { stage: ContestStage }[]) counts[row.stage] += 1;
   return counts;
+}
+
+// 마감일이 비어 있는 공모전 수 (보관된 항목은 제외). 기간 집계에서는 빠지므로 따로 알려 준다.
+export async function countUndatedContests(): Promise<number> {
+  const { count, error } = await getSupabase()
+    .from("contests")
+    .select("id", { count: "exact", head: true })
+    .is("archived_at", null)
+    .is("date", null);
+  if (error) {
+    console.error("마감일 없는 공모전 조회 실패:", error.code);
+    throw new Error("공모전 현황을 불러오지 못했습니다.");
+  }
+  return count ?? 0;
 }
 
 // 마감이 가까운 공모전. 오늘 이후에 마감되고 아직 끝나지 않은(완료가 아닌) 항목만, 가까운 순서로.
