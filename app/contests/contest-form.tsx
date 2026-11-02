@@ -139,9 +139,6 @@ export default function ContestForm() {
         {state.status === "error" && state.message ? (
           <p className="text-red-600">{state.message}</p>
         ) : null}
-        {state.status === "success" && state.message ? (
-          <p className="text-green-700">{state.message}</p>
-        ) : null}
       </div>
 
       <button
