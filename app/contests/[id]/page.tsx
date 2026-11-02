@@ -1,10 +1,12 @@
 // Design Ref: DESIGN §1.2 — /contests/[id] 공모전 상세
-// 수정·보관 버튼은 PLAN 8·9번에서 추가한다.
+// 단계 변경·수정은 PLAN 8번, 보관·복구 버튼은 9번에서 추가한다.
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { CONTEST_STAGES } from "@/lib/constants";
 import { getContest, type Contest } from "@/lib/contests";
 import { formatDate, formatDateTime, orEmpty } from "@/lib/format";
+import { changeContestStage } from "../actions";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -45,6 +47,36 @@ async function ContestDetail({ params }: { params: PageProps<"/contests/[id]">["
             보관됨 ({formatDateTime(contest.archived_at)})
           </span>
         ) : null}
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {/* 단계 버튼: 누르면 단계만 바뀌고 이 화면에 머문다 (현재 단계는 눌러도 변화 없음) */}
+        <form action={changeContestStage.bind(null, contest.id)} className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-foreground/60">단계 변경</span>
+          {CONTEST_STAGES.map((stage) => (
+            <button
+              key={stage}
+              type="submit"
+              name="stage"
+              value={stage}
+              disabled={contest.stage === stage}
+              aria-pressed={contest.stage === stage}
+              className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                contest.stage === stage
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-foreground/20 hover:bg-foreground/10"
+              }`}
+            >
+              {stage}
+            </button>
+          ))}
+        </form>
+        <Link
+          href={`/contests/${contest.id}/edit`}
+          className="ml-auto rounded-md border border-foreground/30 px-4 py-1.5 text-sm font-medium hover:bg-foreground/10"
+        >
+          수정
+        </Link>
       </div>
 
       <dl>
