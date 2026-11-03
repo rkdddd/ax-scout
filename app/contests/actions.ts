@@ -5,6 +5,7 @@
 // updated_at(수정 일시)은 DB 트리거가 저장할 때마다 자동으로 갱신한다.
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireSession } from "@/lib/session-guard";
 import { CONTEST_STAGES } from "@/lib/constants";
 import { getSupabase } from "@/lib/supabase";
 import { contestSchema, toFieldErrors } from "@/lib/validation";
@@ -50,6 +51,7 @@ export async function createContest(
   _prevState: ContestFormState,
   formData: FormData,
 ): Promise<ContestFormState> {
+  await requireSession();
   const result = validateForm(formData);
   if (result.state) return result.state;
 
@@ -71,6 +73,7 @@ export async function updateContest(
   _prevState: ContestFormState,
   formData: FormData,
 ): Promise<ContestFormState> {
+  await requireSession();
   const result = validateForm(formData);
   if (result.state) return result.state;
   if (!isValidId(id)) {
@@ -114,15 +117,18 @@ async function setArchived(id: number, archived: boolean): Promise<void> {
 }
 
 export async function archiveContest(id: number): Promise<void> {
+  await requireSession();
   await setArchived(id, true);
 }
 
 export async function restoreContest(id: number): Promise<void> {
+  await requireSession();
   await setArchived(id, false);
 }
 
 // 상세 화면의 단계 버튼. 단계만 바꾸고 같은 화면에 머문다.
 export async function changeContestStage(id: number, formData: FormData): Promise<void> {
+  await requireSession();
   const stage = CONTEST_STAGES.find((item) => item === formData.get("stage"));
   if (!stage || !isValidId(id)) return; // 화면 버튼으로는 생기지 않는 값이면 무시한다.
 

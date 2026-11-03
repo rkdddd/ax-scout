@@ -5,6 +5,7 @@
 // updated_at(수정 일시)은 DB 트리거가 저장할 때마다 자동으로 갱신한다. 항목은 지우지 않고 보관만 한다.
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireSession } from "@/lib/session-guard";
 import { getSupabase } from "@/lib/supabase";
 import { activitySchema, toFieldErrors } from "@/lib/validation";
 
@@ -50,6 +51,7 @@ export async function createActivity(
   _prevState: ActivityFormState,
   formData: FormData,
 ): Promise<ActivityFormState> {
+  await requireSession();
   const result = validateForm(formData);
   if (result.state) return result.state;
 
@@ -71,6 +73,7 @@ export async function updateActivity(
   _prevState: ActivityFormState,
   formData: FormData,
 ): Promise<ActivityFormState> {
+  await requireSession();
   const result = validateForm(formData);
   if (result.state) return result.state;
   if (!isValidId(id)) {
@@ -114,9 +117,11 @@ async function setArchived(id: number, archived: boolean): Promise<void> {
 }
 
 export async function archiveActivity(id: number): Promise<void> {
+  await requireSession();
   await setArchived(id, true);
 }
 
 export async function restoreActivity(id: number): Promise<void> {
+  await requireSession();
   await setArchived(id, false);
 }

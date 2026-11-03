@@ -4,6 +4,7 @@
 // 로그인이 없는 대신 서버에서 입력값을 모두 다시 검증하고, 공고 정보는 화면이 보낸 값이 아니라 DB에서 다시 읽어 쓴다.
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireSession } from "@/lib/session-guard";
 import { NOTICE_CONTEST_STAGE } from "@/lib/constants";
 import { normalizeLink } from "@/lib/link-normalize";
 import { getNotice } from "@/lib/notices";
@@ -26,6 +27,7 @@ const UNIQUE_VIOLATION = "23505";
 
 // 링크로 공고를 등록한다.
 export async function addNoticeByLink(_prev: LinkFormState, formData: FormData): Promise<LinkFormState> {
+  await requireSession();
   const values: Record<string, string> = {};
   for (const field of FIELDS) values[field] = String(formData.get(field) ?? "");
 
@@ -123,6 +125,7 @@ export async function addNoticeByLink(_prev: LinkFormState, formData: FormData):
 
 // 공고를 "검토" 단계의 공모전으로 등록한다. 같은 공고 링크로는 공모전이 두 번 만들어지지 않는다.
 export async function registerNoticeAsContest(noticeId: number): Promise<void> {
+  await requireSession();
   if (!Number.isSafeInteger(noticeId) || noticeId < 1) redirect("/notices");
 
   const notice = await getNotice(noticeId); // 화면에서 받은 값을 믿지 않고 DB에서 다시 읽는다
@@ -170,9 +173,11 @@ async function setHidden(noticeId: number, hidden: boolean): Promise<void> {
 }
 
 export async function hideNotice(noticeId: number): Promise<void> {
+  await requireSession();
   await setHidden(noticeId, true);
 }
 
 export async function restoreNotice(noticeId: number): Promise<void> {
+  await requireSession();
   await setHidden(noticeId, false);
 }

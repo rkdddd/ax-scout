@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import Link from "next/link";
 import { Suspense } from "react";
+import LogoutButton from "@/components/logout-button";
 import MainNav from "@/components/main-nav";
 import "./globals.css";
 
@@ -41,6 +42,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             {/* 주소가 바뀌는 화면(/contests/[id] 등)에서 현재 주소를 읽으려면 Suspense가 필요하다 */}
             <Suspense fallback={<div className="h-9" aria-hidden />}>
               <MainNav />
+            </Suspense>
+            <Suspense fallback={null}>
+              <LogoutButton />
             </Suspense>
           </div>
         </header>
