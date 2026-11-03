@@ -3,8 +3,8 @@
 // Design Ref: DESIGN §2.1·§2.2 — 폼 입력 → 서버 동작이 받음 → 검증 → Supabase 저장 → 화면 갱신.
 // 로그인이 없는 대신 서버에서 입력값을 모두 다시 검증한다.
 // updated_at(수정 일시)은 DB 트리거가 저장할 때마다 자동으로 갱신한다. 항목은 지우지 않고 보관만 한다.
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { refreshAllViews } from "@/lib/refresh";
 import { requireSession } from "@/lib/session-guard";
 import { getSupabase } from "@/lib/supabase";
 import { activitySchema, toFieldErrors } from "@/lib/validation";
@@ -63,7 +63,7 @@ export async function createActivity(
   }
 
   // 저장이 끝나면 목록으로 이동한다 (redirect는 오류처럼 던져지므로 try 밖에서 부른다).
-  revalidatePath("/activities");
+  refreshAllViews();
   redirect("/activities?notice=created"); // notice: 화면에 "등록했어요" 알림을 잠깐 띄운다
 }
 
@@ -93,8 +93,8 @@ export async function updateActivity(
     return { status: "error", message: NOT_FOUND, values: result.values };
   }
 
-  revalidatePath("/activities");
-  revalidatePath(`/activities/${id}`);
+  refreshAllViews();
+  refreshAllViews();
   redirect(`/activities/${id}?notice=updated`);
 }
 
@@ -112,8 +112,8 @@ async function setArchived(id: number, archived: boolean): Promise<void> {
     throw new Error(archived ? "보관하지 못했습니다." : "복구하지 못했습니다.");
   }
 
-  revalidatePath("/activities");
-  revalidatePath(`/activities/${id}`);
+  refreshAllViews();
+  refreshAllViews();
 }
 
 export async function archiveActivity(id: number): Promise<void> {
