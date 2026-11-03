@@ -3,8 +3,9 @@
 // Design Ref: DESIGN §2.1 — 폼 입력 → 서버 동작이 받음 → 검증 → Supabase 저장 → 화면 갱신.
 // 로그인이 없는 대신 서버에서 입력값을 모두 다시 검증한다.
 // updated_at(수정 일시)은 DB 트리거가 저장할 때마다 자동으로 갱신한다.
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { refreshAllViews } from "@/lib/refresh";
+import { requireSession } from "@/lib/session-guard";
 import { CONTEST_STAGES } from "@/lib/constants";
 import { getSupabase } from "@/lib/supabase";
 import { contestSchema, toFieldErrors } from "@/lib/validation";
@@ -50,6 +51,7 @@ export async function createContest(
   _prevState: ContestFormState,
   formData: FormData,
 ): Promise<ContestFormState> {
+  await requireSession();
   const result = validateForm(formData);
   if (result.state) return result.state;
 
@@ -61,7 +63,7 @@ export async function createContest(
   }
 
   // 저장이 끝나면 목록으로 이동한다 (redirect는 오류처럼 던져지므로 try 밖에서 부른다).
-  revalidatePath("/contests");
+  refreshAllViews();
   redirect("/contests?notice=created"); // notice: 화면에 "등록했어요" 알림을 잠깐 띄운다
 }
 
@@ -71,6 +73,7 @@ export async function updateContest(
   _prevState: ContestFormState,
   formData: FormData,
 ): Promise<ContestFormState> {
+  await requireSession();
   const result = validateForm(formData);
   if (result.state) return result.state;
   if (!isValidId(id)) {
@@ -90,8 +93,8 @@ export async function updateContest(
     return { status: "error", message: "찾을 수 없는 항목입니다.", values: result.values };
   }
 
-  revalidatePath("/contests");
-  revalidatePath(`/contests/${id}`);
+  refreshAllViews();
+  refreshAllViews();
   redirect(`/contests/${id}?notice=updated`);
 }
 
@@ -109,20 +112,23 @@ async function setArchived(id: number, archived: boolean): Promise<void> {
     throw new Error(archived ? "보관하지 못했습니다." : "복구하지 못했습니다.");
   }
 
-  revalidatePath("/contests");
-  revalidatePath(`/contests/${id}`);
+  refreshAllViews();
+  refreshAllViews();
 }
 
 export async function archiveContest(id: number): Promise<void> {
+  await requireSession();
   await setArchived(id, true);
 }
 
 export async function restoreContest(id: number): Promise<void> {
+  await requireSession();
   await setArchived(id, false);
 }
 
 // 상세 화면의 단계 버튼. 단계만 바꾸고 같은 화면에 머문다.
 export async function changeContestStage(id: number, formData: FormData): Promise<void> {
+  await requireSession();
   const stage = CONTEST_STAGES.find((item) => item === formData.get("stage"));
   if (!stage || !isValidId(id)) return; // 화면 버튼으로는 생기지 않는 값이면 무시한다.
 
@@ -132,6 +138,6 @@ export async function changeContestStage(id: number, formData: FormData): Promis
     throw new Error("단계를 바꾸지 못했습니다.");
   }
 
-  revalidatePath("/contests");
-  revalidatePath(`/contests/${id}`);
+  refreshAllViews();
+  refreshAllViews();
 }

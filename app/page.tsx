@@ -6,6 +6,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import EmptyState from "@/components/empty-state";
 import PageHeader from "@/components/page-header";
+import NoticeHighlights from "./notice-highlights";
 import StageBadge from "@/components/stage-badge";
 import TypeBadge from "@/components/type-badge";
 import { Button } from "@/components/ui/button";
@@ -231,6 +232,9 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
             </ul>
           )}
         </section>
+
+        {/* 새로 모은 공고 · 마감 임박 공고 · 관심 공모전 (기간 선택과 별개로 오늘 기준) */}
+        <NoticeHighlights today={today} />
 
         {/* 최근 수정한 항목 (보관된 항목은 제외) */}
         <section className="rounded-3xl bg-card p-6" aria-labelledby="recent-items">

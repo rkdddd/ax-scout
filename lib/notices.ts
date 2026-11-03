@@ -24,14 +24,14 @@ export type CollectionRun = {
   error_summary: string | null;
 };
 
-const COLUMNS =
+export const NOTICE_COLUMNS =
   "id,source_url,organization,title,deadline,eligibility,origin,source_name,collected_at,created_at,archived_at";
 
 type ListOptions = { origin?: NoticeOrigin; includeArchived?: boolean };
 
 // 공고 전체(필터 적용). 정렬과 "마감 후 오래된 공고 숨김"은 lib/notice-order.ts가 맡는다.
 export async function listNotices({ origin, includeArchived }: ListOptions) {
-  let query = getSupabase().from("notices").select(COLUMNS).order("id", { ascending: false });
+  let query = getSupabase().from("notices").select(NOTICE_COLUMNS).order("id", { ascending: false });
   if (origin) query = query.eq("origin", origin);
   if (!includeArchived) query = query.is("archived_at", null);
 
@@ -44,7 +44,7 @@ export async function listNotices({ origin, includeArchived }: ListOptions) {
 }
 
 export async function getNotice(id: number) {
-  const { data, error } = await getSupabase().from("notices").select(COLUMNS).eq("id", id).maybeSingle();
+  const { data, error } = await getSupabase().from("notices").select(NOTICE_COLUMNS).eq("id", id).maybeSingle();
   if (error) {
     console.error("공고 조회 실패:", error.code);
     throw new Error("공고를 불러오지 못했습니다.");

@@ -2,8 +2,9 @@
 
 // Design Ref: DESIGN §2.4·§2.5 — 링크로 공고 등록, 공고를 "검토" 단계 공모전으로 등록, 공고 숨기기·되살리기.
 // 로그인이 없는 대신 서버에서 입력값을 모두 다시 검증하고, 공고 정보는 화면이 보낸 값이 아니라 DB에서 다시 읽어 쓴다.
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { refreshAllViews } from "@/lib/refresh";
+import { requireSession } from "@/lib/session-guard";
 import { NOTICE_CONTEST_STAGE } from "@/lib/constants";
 import { normalizeLink } from "@/lib/link-normalize";
 import { getNotice } from "@/lib/notices";
@@ -26,6 +27,7 @@ const UNIQUE_VIOLATION = "23505";
 
 // 링크로 공고를 등록한다.
 export async function addNoticeByLink(_prev: LinkFormState, formData: FormData): Promise<LinkFormState> {
+  await requireSession();
   const values: Record<string, string> = {};
   for (const field of FIELDS) values[field] = String(formData.get(field) ?? "");
 
@@ -59,7 +61,7 @@ export async function addNoticeByLink(_prev: LinkFormState, formData: FormData):
   }
   if (existing) {
     if (existing.archived_at) await supabase.from("notices").update({ archived_at: null }).eq("id", existing.id);
-    revalidatePath("/notices");
+    refreshAllViews();
     redirect(`/notices?notice=${existing.archived_at ? "restored" : "exists"}`);
   }
 
@@ -110,19 +112,20 @@ export async function addNoticeByLink(_prev: LinkFormState, formData: FormData):
   });
   if (error) {
     if (error.code === UNIQUE_VIOLATION) {
-      revalidatePath("/notices");
+      refreshAllViews();
       redirect("/notices?notice=exists");
     }
     console.error("공고 저장 실패:", error.code);
     return { status: "error", message: "저장하지 못했어요. 잠시 후 다시 시도해 주세요.", values };
   }
 
-  revalidatePath("/notices");
+  refreshAllViews();
   redirect("/notices?notice=added");
 }
 
 // 공고를 "검토" 단계의 공모전으로 등록한다. 같은 공고 링크로는 공모전이 두 번 만들어지지 않는다.
 export async function registerNoticeAsContest(noticeId: number): Promise<void> {
+  await requireSession();
   if (!Number.isSafeInteger(noticeId) || noticeId < 1) redirect("/notices");
 
   const notice = await getNotice(noticeId); // 화면에서 받은 값을 믿지 않고 DB에서 다시 읽는다
@@ -150,8 +153,8 @@ export async function registerNoticeAsContest(noticeId: number): Promise<void> {
     throw new Error("공모전으로 등록하지 못했습니다.");
   }
 
-  revalidatePath("/contests");
-  revalidatePath("/notices");
+  refreshAllViews();
+  refreshAllViews();
   redirect(`/contests/${data.id}?notice=registered`);
 }
 
@@ -166,13 +169,15 @@ async function setHidden(noticeId: number, hidden: boolean): Promise<void> {
     console.error(hidden ? "공고 숨기기 실패:" : "공고 되살리기 실패:", error.code);
     throw new Error(hidden ? "숨기지 못했습니다." : "되살리지 못했습니다.");
   }
-  revalidatePath("/notices");
+  refreshAllViews();
 }
 
 export async function hideNotice(noticeId: number): Promise<void> {
+  await requireSession();
   await setHidden(noticeId, true);
 }
 
 export async function restoreNotice(noticeId: number): Promise<void> {
+  await requireSession();
   await setHidden(noticeId, false);
 }
